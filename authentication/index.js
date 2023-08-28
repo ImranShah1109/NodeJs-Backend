@@ -34,6 +34,8 @@ app.post('/signup', async (req, res) =>{
 
 })
 
+
+// POST - Login user
 app.post('/login', async (req, res) =>{
     try {
 

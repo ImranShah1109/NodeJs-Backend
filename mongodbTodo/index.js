@@ -1,9 +1,15 @@
 import express from "express";
 import mongoose from "mongoose";
-import {todo} from "./TodoSchema.js";
+import {todo} from "./models/TodoSchema.js";
 import dotenv from "dotenv";
+import { isAuth } from "./middelwares/AuthMiddelware.js";
+import { isUserExisting } from "./utils/UsernameCheck.js";
+import { user } from "./models/UserSchema.js"
+import { LoggerMiddelware } from "./middelwares/LoggerMiddelwares.js"
+import bcrypt from "bcrypt"
 // ES5 way 
 // const Todo = require("./TodoSchema.js")
+// const { LoggerMiddelware } = require('./middelwares/LoggerMiddelwares.js');
 
 dotenv.config(); // for .env file
 // console.log(process.env.MONGODB_URI)
@@ -13,17 +19,62 @@ const PORT = 8001;
 app.use(express.json());
 
 // below code is middleware code
-app.use((req,res,next)=>{
-    // sample logger
-    console.log(`Header : ${req.header}`)
-    console.log(`Body : ${req.body}`)
-    console.log(`URL : ${req.url}`)
-    console.log(`Method : ${req.method}`);
+app.use( LoggerMiddelware );
 
-    //after below code endpoint code will execute
-    next();
+// POST - Creating new user
+app.post('/signup', async (req, res) =>{
+
+    try {
+        const userBody = req.body;
+        const userExist =await isUserExisting(userBody.username);
+        console.log("Body -->",userExist);
+        if(userExist){
+            res.send({
+                status : 400,
+                message : "User already exist"
+            });
+
+            return;
+        }
+        const salt = parseInt(process.env.SALT_ROUNDS)
+        const hashPassword = await bcrypt.hash(userBody.password,salt);
+        // console.log("hashed -> ",hashPassword)
+        const userObj = new user({
+            username : userBody.username,
+            password : hashPassword,
+            email : userBody.email
+        });
+        await userObj.save();
+
+        res.status(200).send('User Created successfully!!');
+
+    } catch (error) {
+        console.log("err -> ",error);
+        res.status(500).send("Internal server error"); 
+    }
+
 })
 
+
+// POST - Login user
+app.post('/login', async (req, res) =>{
+    try {
+
+        const loginBody = req.body;
+        const userData =await user.findOne({username:loginBody.username});
+        const isCorrectPassword =await bcrypt.compare(loginBody.password,userData.password)
+
+        if(isCorrectPassword){
+            res.status(200).send("User Logged in!!");
+        }
+        else{
+            res.status(400).send("Your Password is incorrect");
+        }
+
+    } catch (error) {
+        res.status(500).send("Internal server error");
+    }
+})
 
 //GET - fetch the all todos
 app.get('/todos', async(req, res) => {
@@ -48,12 +99,22 @@ app.get('/todo/:id', async(req, res) => {
     }
 })
 
+//isAuth is middelware to check is user loged in or not
 // new todo
-app.post('/todo', (req, res) => {
+app.post('/todo', isAuth ,(req, res) => {
+    const { task, isCompleted, username } = req.body;
+
+    if (task.length == 0 || isCompleted == null || username.legnth == 0) {
+        res.send({
+        status: 400,
+        message: "Please enter the values in correct format!",
+        });
+    }
     try{
         const todoObj = new todo({
-            task : req.body.task,
-            isCompleted : req.body.isCompleted
+            task : task,
+            isCompleted : isCompleted,
+            username : username
         })
 
     // save the object in db

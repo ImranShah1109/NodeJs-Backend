@@ -15,6 +15,10 @@ const Todo = new Schema({
         type : Date,
         default : Date.now(),
         required : false
+    },
+    username : {
+        type : String,
+        required : true
     }
 },
 {
