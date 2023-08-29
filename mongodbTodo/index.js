@@ -27,7 +27,7 @@ app.post('/signup', async (req, res) =>{
     try {
         const userBody = req.body;
         const userExist =await isUserExisting(userBody.username);
-        console.log("Body -->",userExist);
+        // console.log("Body -->",userExist);
         if(userExist){
             res.send({
                 status : 400,
@@ -77,9 +77,10 @@ app.post('/login', async (req, res) =>{
 })
 
 //GET - fetch the all todos
-app.get('/todos', async(req, res) => {
+app.get('/todos/:username', isAuth, async(req, res) => {
   try {
-    const todos = await todo.find({});
+    const username = req.params.username;
+    const todos = await todo.find({ username });
     res.status(200).json({data:todos});
   }catch (error) {
     res.status(500).send("Internal server error");
