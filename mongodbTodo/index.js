@@ -80,15 +80,27 @@ app.post('/login', async (req, res) =>{
 app.get('/todos/:username', isAuth, async(req, res) => {
   try {
     const username = req.params.username;
-    const todos = await todo.find({ username });
-    res.status(200).json({data:todos});
+    const page = req.query.page || 0;   //client
+    const LIMIT = 5                     //Backend
+    const todos = await todo.aggregate([
+        {   $match : {username : username}  },
+        {
+            $facet : {
+                data : [
+                    {$skip : parseInt(page)*LIMIT},
+                    {$limit : LIMIT}
+                ]
+            }
+        }
+    ])
+    res.status(200).json({todos});
   }catch (error) {
     res.status(500).send("Internal server error");
   }
 });
 
 //GET - fetch the todo by id
-app.get('/todo/:id', async(req, res) => {
+app.get('/todo/:id', isAuth, async(req, res) => {
     try {
         const todoId = req.params.id;
         const todoObj = await todo.findById(todoId);
@@ -128,7 +140,7 @@ app.post('/todo', isAuth ,(req, res) => {
 })
 
 // DELETE - delete the one todo by id
-app.delete('/todo/:id', async (req, res) => {
+app.delete('/todo/:id', isAuth ,async (req, res) => {
     try {
         const todoId = req.params.id;
         await todo.findByIdAndDelete(todoId);
@@ -140,7 +152,7 @@ app.delete('/todo/:id', async (req, res) => {
 });
 
 // PUT - update the todo
-app.put('/todo', async(req, res) =>{
+app.put('/todo',isAuth, async(req, res) =>{
     try {
         const { id, isCompleted} = req.body;
         await todo.findByIdAndUpdate(id,{isCompleted:isCompleted});
