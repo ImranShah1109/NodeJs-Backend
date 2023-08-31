@@ -80,14 +80,14 @@ app.post('/login', async (req, res) =>{
 app.get('/todos/:username', isAuth, async(req, res) => {
   try {
     const username = req.params.username;
-    const page = req.query.page || 0;   //client
+    const page = req.query.page || 1;   //client
     const LIMIT = 5                     //Backend
     const todos = await todo.aggregate([
         {   $match : {username : username}  },
         {
             $facet : {
                 data : [
-                    {$skip : parseInt(page)*LIMIT},
+                    {$skip : (parseInt(page)-1) * LIMIT },
                     {$limit : LIMIT}
                 ]
             }
