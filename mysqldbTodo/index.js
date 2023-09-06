@@ -46,4 +46,28 @@ app.post('/todo',(req,res)=>{
     });
 })
 
+// GET - fetch all todos base on username
+app.get('/todos/:username',(req,res)=>{
+    const username = req.params.username;
+
+    let query = `SELECT * FROM todos WHERE username = '${username}'`;
+
+    db.query(query,(err,result)=>{
+        if(err) throw err;
+        res.send({"data":result});
+    })
+})
+
+//DELETE -  Delete the todo based on id
+app.delete('/todo/:id', (req, res)=>{
+    const todoId = req.params.id;
+
+    const query = `DELETE FROM todos WHERE id=${todoId}`;
+    db.query(query,(err, result)=>{
+        if(err) throw err;
+
+        res.send('Todo deleted sucessfully!');
+    })
+})
+
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}!`))
